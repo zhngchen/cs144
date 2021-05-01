@@ -1,86 +1,44 @@
-For build prereqs, see [the CS144 VM setup instructions](https://web.stanford.edu/class/cs144/vm_howto).
+CS144 lab的记录
 
-## Sponge quickstart
+## lab0
 
-To set up your build directory:
+connection: close 不采用非持续连接，
 
-	$ mkdir -p <path/to/sponge>/build
-	$ cd <path/to/sponge>/build
-	$ cmake ..
+shutdown: 关闭连接（两条连接，可关闭一个）
 
-**Note:** all further commands listed below should be run from the `build` dir.
 
-To build:
 
-    $ make
+可靠连接实验
 
-You can use the `-j` switch to build in parallel, e.g.,
+记第一次提交，我的思路似乎有问题： 比如容量是2， 写cat, 我的意愿是写入ca后，t之后（read之后）也会传过去，但是根据测试用例不是的，所以有测试用例没有通过，代码也比较复杂。因为实际传输中，write方会知道还有多少剩余容量可以传输，所以如果传的比剩余容量还多的话就可以丢掉。
 
-    $ make -j$(nproc)
+思路是维护一个队列，写入时要考虑剩余的容量，读取时要考虑有多少已经写入的。（当然用string也是可以的）
 
-To test (after building; make sure you've got the [build prereqs](https://web.stanford.edu/class/cs144/vm_howto) installed!)
 
-    $ make check_lab0
-
-or
-
-	$ make check_lab1
-
-etc.
-
-The first time you run a `make check`, it may run `sudo` to configure two
-[TUN](https://www.kernel.org/doc/Documentation/networking/tuntap.txt) devices for use during testing.
-
-### build options
-
-You can specify a different compiler when you run cmake:
-
-    $ CC=clang CXX=clang++ cmake ..
-
-You can also specify `CLANG_TIDY=` or `CLANG_FORMAT=` (see "other useful targets", below).
-
-Sponge's build system supports several different build targets. By default, cmake chooses the `Release`
-target, which enables the usual optimizations. The `Debug` target enables debugging and reduces the
-level of optimization. To choose the `Debug` target:
-
-    $ cmake .. -DCMAKE_BUILD_TYPE=Debug
-
-The following targets are supported:
-
-- `Release` - optimizations
-- `Debug` - debug symbols and `-Og`
-- `RelASan` - release build with [ASan](https://en.wikipedia.org/wiki/AddressSanitizer) and
-  [UBSan](https://developers.redhat.com/blog/2014/10/16/gcc-undefined-behavior-sanitizer-ubsan/)
-- `RelTSan` - release build with
-  [ThreadSan](https://developer.mozilla.org/en-US/docs/Mozilla/Projects/Thread_Sanitizer)
-- `DebugASan` - debug build with ASan and UBSan
-- `DebugTSan` - debug build with ThreadSan
-
-Of course, you can combine all of the above, e.g.,
-
-    $ CLANG_TIDY=clang-tidy-6.0 CXX=clang++-6.0 .. -DCMAKE_BUILD_TYPE=Debug
-
-**Note:** if you want to change `CC`, `CXX`, `CLANG_TIDY`, or `CLANG_FORMAT`, you need to remove
-`build/CMakeCache.txt` and re-run cmake. (This isn't necessary for `CMAKE_BUILD_TYPE`.)
-
-### other useful targets
-
-To generate documentation (you'll need `doxygen`; output will be in `build/doc/`):
-
-    $ make doc
-
-To lint (you'll need `clang-tidy`):
-
-    $ make -j$(nproc) tidy
-
-To run cppcheck (you'll need `cppcheck`):
-
-    $ make cppcheck
-
-To format (you'll need `clang-format`):
-
-    $ make format
-
-To see all available targets,
-
-    $ make help
+## 代码规范
+The lab assignments will be done in a contemporary C++ style that uses recent (2011)
+features to program as safely as possible. This might be different from how you have been
+asked to write C++ in the past. For references to this style, please see the C++ Core
+Guidelines (http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines).
+The basic idea is to make sure that every object is designed to have the smallest possible
+public interface, has a lot of internal safety checks and is hard to use improperly, and knows
+how to clean up after itself. We want to avoid “paired” operations (e.g. malloc/free, or
+new/delete), where it might be possible for the second half of the pair not to happen (e.g., if a CS144: Introduction to Computer Networking Fall 2020 function returns early or throws an exception). Instead, operations happen in the constructor to an object, and the opposite operation happens in the destructor. This style is called “Resource acquisition is initialization,” or RAII.
+In particular, we would like you to:
+- Use the language documentation at https://en.cppreference.com as a resource.
+- Never use malloc() or free().
+- Never use new or delete.
+- Essentially never use raw pointers (*), and use “smart” pointers (unique ptr or
+shared ptr) only when necessary. (You will not need to use these in CS144.)
+- Avoid templates, threads, locks, and virtual functions. (You will not need to use these
+in CS144.)
+- Avoid C-style strings (char *str) or string functions (strlen(), strcpy()). These
+are pretty error-prone. Use a std::string instead.
+- Never use C-style casts (e.g., (FILE *)x). Use a C++ static cast if you have to (you
+generally will not need this in CS144).
+- Prefer passing function arguments by const reference (e.g.: const Address & address).
+- Make every variable const unless it needs to be mutated.
+- Make every method const unless it needs to mutate the object.
+- Avoid global variables, and give every variable the smallest scope possible.
+- Before handing in an assignment, please run make format to normalize the coding
+style.
