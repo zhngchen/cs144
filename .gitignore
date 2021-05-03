@@ -9,3 +9,4 @@ CTestTestfile.cmake
 compile_commands.json
 .vscode
 README.assets
+/mytest
