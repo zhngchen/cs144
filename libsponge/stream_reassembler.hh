@@ -4,7 +4,10 @@
 #include "byte_stream.hh"
 
 #include <cstdint>
+#include <set>
 #include <string>
+
+// 处理还没有assemble的字符串
 
 //! \brief A class that assembles a series of excerpts from a byte stream (possibly out of order,
 //! possibly overlapping) into an in-order byte stream.
@@ -14,6 +17,26 @@ class StreamReassembler {
 
     ByteStream _output;  //!< The reassembled in-order byte stream
     size_t _capacity;    //!< The maximum number of bytes
+    size_t _first_unread = 0;
+    size_t _first_unassembled = 0;
+    size_t _first_unacceptable;
+    bool _eof = false;  // 是否已经见到了eof标志
+
+    struct seg {
+        size_t index;
+        std::string data;
+        size_t length;
+        // 重名会报错
+        seg(size_t i, std::string d) : index(i), data(d), length(data.size()) {}
+        // 让set升序排列
+        bool operator<(const seg t) const { return index < t.index; }
+    };
+    std::set<seg> _stored_segs = {};  // 储存seg, 维护使所有的seg不重叠
+
+    void _add_new_seg(seg &new_seg, const bool eof);
+    void _handle_overlap(seg &new_seg);
+    void _stitch_output();
+    void _merge_seg(seg &new_seg, const seg &other);
 
   public:
     //! \brief Construct a `StreamReassembler` that will store up to `capacity` bytes.
